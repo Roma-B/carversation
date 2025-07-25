@@ -1,0 +1,15 @@
+##################################################
+#
+# COMMON
+#
+##################################################
+
+# Note: we need the spring.application.xy properties as one-liner for logback-spring.xml
+spring.application.id: CAR
+spring.application.name: '@project.artifactId@'
+spring.application.version: '@project.version@'
+
+spring.datasource:
+  username: parking_admin
+  password: G8xkJsKcQe5gKnPYHIEa
+  url: jdbc:postgresql://localhost:5002/carversation
