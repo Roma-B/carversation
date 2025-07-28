@@ -19,3 +19,7 @@ spring:
     hibernate:
       ddl-auto: update
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+openai:
+  api:
+    key: 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
