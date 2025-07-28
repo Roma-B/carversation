@@ -9,7 +9,13 @@ spring.application.id: CAR
 spring.application.name: '@project.artifactId@'
 spring.application.version: '@project.version@'
 
-spring.datasource:
-  username: parking_admin
-  password: G8xkJsKcQe5gKnPYHIEa
-  url: jdbc:postgresql://localhost:5002/carversation
+spring:
+  datasource:
+    username: parking_admin
+    password: G8xkJsKcQe5gKnPYHIEa
+    url: jdbc:postgresql://localhost:5002/carversation
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
