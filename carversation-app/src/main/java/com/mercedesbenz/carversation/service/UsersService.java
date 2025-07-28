@@ -7,8 +7,8 @@ import com.mercedesbenz.carversation.repository.UsersRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class UsersService {
@@ -16,23 +16,28 @@ public class UsersService {
     @Autowired
     private UsersRepository usersRepository;
 
+    @Autowired
+    private AiNameGenerator aiNameGenerator;
+
     public NearByUsers findUsersWithinRadius(double lat, double lng, String vin, double radius) {
         usersRepository.updateCarLocation(vin, lat, lng);
-        List<User> nearByUsers = mapToUsers(usersRepository.findNearbyUsers(vin, lat, lng, radius));
+        List<UserEntity> entities = usersRepository.findNearbyUsers(vin, lat, lng, radius);
+        List<String> uniqueNames = aiNameGenerator.getUniqueRandomNames(entities.size());
+        List<User> nearByUsers = mapToUsers(entities, uniqueNames);
         return new NearByUsers(vin, nearByUsers);
     }
 
-    public List<User> mapToUsers(List<UserEntity> entities) {
-        return entities.stream()
-                .map(this::mapToUser)
-                .collect(Collectors.toList());
-    }
-
-    private User mapToUser(UserEntity entity) {
-        User user = new User();
-        user.setVin(entity.getVin());
-        user.setLat(entity.getLat());
-        user.setLng(entity.getLng());
-        return user;
+    public List<User> mapToUsers(List<UserEntity> entities, List<String> names) {
+        List<User> users = new ArrayList<>();
+        for (int i = 0; i < entities.size(); i++) {
+            UserEntity entity = entities.get(i);
+            User user = new User();
+            user.setVin(entity.getVin());
+            user.setLat(entity.getLat());
+            user.setLng(entity.getLng());
+            user.setName(names.get(i));
+            users.add(user);
+        }
+        return users;
     }
 }
