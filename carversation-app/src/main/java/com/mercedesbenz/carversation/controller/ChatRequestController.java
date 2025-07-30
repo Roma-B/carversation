@@ -1,30 +1,54 @@
 package com.mercedesbenz.carversation.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mercedesbenz.carversation.payload.ChatPayload;
+import com.mercedesbenz.carversation.util.GlobalStore;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.WebSocketHandler;
-import org.springframework.web.socket.WebSocketMessage;
-import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.*;
 
 @Slf4j
 public class ChatRequestController implements WebSocketHandler {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        //log connection establishment
-        log.info("Connection established: {}", session.getId());
+        log.info("Connection initiated: {}", session.getId());
+        String VIN = session.getHandshakeHeaders().getFirst("X-VIN");
+        String sessionId = session.getId();
+        GlobalStore.CLIENT_WEBSOCKET_SESSIONS.put(VIN, session);
+        log.info("Connection established with Session Id: {} and VIN; {}", sessionId, VIN);
     }
 
     @Override
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
-        // add handling logic for incoming messages later
-        String chatMessage = (String) message.getPayload();
-        log.info("Received message: {}", chatMessage);
-        // Simulate processing the chat message
-        session.sendMessage(new org.springframework.web.socket.TextMessage("Processing chat request: " + chatMessage));
-        // Simulate a delay for processing
-        Thread.sleep(50);
-        session.sendMessage(new org.springframework.web.socket.TextMessage("Finished processing chat request: " + chatMessage));
+        String VIN = session.getHandshakeHeaders().getFirst("X-VIN");
+        String sessionId = session.getId();
+        // Check if session is already present for the VIN else put into the map if connection status is open,
+        // This check I added in case if we lost session from our side from memory by any chance, then we will re add it
+        if(!isSessionIsAlreadyExistingForVin(VIN, sessionId)) {
+            GlobalStore.CLIENT_WEBSOCKET_SESSIONS.put(VIN, session);
+        }
+        log.info("Received request from VIN: {} with Session ID: {}", VIN, sessionId);
+        // Here we can handle the logic for routing incoming chat messages like chat payloads (ChatPayload)
+        String stringMessage = (String) message.getPayload();
+        ChatPayload chatMessage = objectMapper.readValue(stringMessage, ChatPayload.class);
+        log.info("Received message: {} for VIN : {}", chatMessage.getMessage(), chatMessage.getVin());
+        // look for the session Id in GlobalStore for the given vin in the payload
+        if (!GlobalStore.CLIENT_WEBSOCKET_SESSIONS.containsKey(chatMessage.getVin())) {
+            log.error("No active session found for VIN: {}", chatMessage.getVin());
+            session.sendMessage(new org.springframework.web.socket.TextMessage("No active session found for VIN: " + chatMessage.getVin()));
+            return;
+        }
+        //if found, send the message to the session
+        WebSocketSession clientSession = GlobalStore.CLIENT_WEBSOCKET_SESSIONS.get(chatMessage.getVin());
+        if (clientSession == null || !clientSession.isOpen()) {
+            log.error("Session for VIN: {} is not open or does not exist", chatMessage.getVin());
+            session.sendMessage(new org.springframework.web.socket.TextMessage("Session for VIN: " + chatMessage.getVin() + " is not open or does not exist"));
+            return;
+        }
+        clientSession.sendMessage(new org.springframework.web.socket.TextMessage(chatMessage.getMessage()));
+        session.sendMessage(new org.springframework.web.socket.TextMessage("Message sent to VIN: " + chatMessage.getVin()));
     }
 
     @Override
@@ -42,6 +66,11 @@ public class ChatRequestController implements WebSocketHandler {
     @Override
     public boolean supportsPartialMessages() {
         return false;
+    }
+
+    private Boolean isSessionIsAlreadyExistingForVin(String VIN, String sessionId) {
+        WebSocketSession existingSessionForVin = GlobalStore.CLIENT_WEBSOCKET_SESSIONS.get(VIN);
+        return existingSessionForVin != null && existingSessionForVin.getId().equals(sessionId) && existingSessionForVin.isOpen();
     }
 
 }
