@@ -2,53 +2,83 @@ package com.mercedesbenz.carversation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mercedesbenz.carversation.payload.ChatPayload;
+import com.mercedesbenz.carversation.payload.MessageTypeEnum;
+import com.mercedesbenz.carversation.service.ChatService;
 import com.mercedesbenz.carversation.util.GlobalStore;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.socket.*;
+
+import java.io.IOException;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class ChatRequestController implements WebSocketHandler {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Autowired
+    private ChatService chatService;
+
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         log.info("Connection initiated: {}", session.getId());
-        String VIN = session.getHandshakeHeaders().getFirst("X-VIN");
+        String vin = extractVinFromSession(session);
+        if(vin == null){
+            log.error("VIN is not present in the query parameters or invalid length");
+            session.sendMessage(new org.springframework.web.socket.TextMessage("VIN is not present in the query parameters or invalid length"));
+            session.close(CloseStatus.POLICY_VIOLATION);
+            return;
+        }
         String sessionId = session.getId();
-        GlobalStore.CLIENT_WEBSOCKET_SESSIONS.put(VIN, session);
-        log.info("Connection established with Session Id: {} and VIN; {}", sessionId, VIN);
+        GlobalStore.CLIENT_WEBSOCKET_SESSIONS.put(vin, session);
+        log.info("Connection established with Session Id: {} and VIN: {}", sessionId, vin);
     }
 
     @Override
-    public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
-        String VIN = session.getHandshakeHeaders().getFirst("X-VIN");
+    public void handleMessage(WebSocketSession session, WebSocketMessage<?> webSocketMessage) throws Exception {
+        String senderVin = extractVinFromSession(session);
+        if(senderVin == null){
+            log.error("VIN is not present in the query parameters or invalid length");
+            session.sendMessage(new org.springframework.web.socket.TextMessage("VIN is not present in the query parameters or invalid length"));
+            session.close(CloseStatus.POLICY_VIOLATION);
+            return;
+        }
         String sessionId = session.getId();
-        // Check if session is already present for the VIN else put into the map if connection status is open,
-        // This check I added in case if we lost session from our side from memory by any chance, then we will re add it
-        if(!isSessionIsAlreadyExistingForVin(VIN, sessionId)) {
-            GlobalStore.CLIENT_WEBSOCKET_SESSIONS.put(VIN, session);
+        if(!isSessionIsAlreadyExistingForVin(senderVin, sessionId)) {
+            GlobalStore.CLIENT_WEBSOCKET_SESSIONS.put(senderVin, session);
         }
-        log.info("Received request from VIN: {} with Session ID: {}", VIN, sessionId);
-        // Here we can handle the logic for routing incoming chat messages like chat payloads (ChatPayload)
-        String stringMessage = (String) message.getPayload();
-        ChatPayload chatMessage = objectMapper.readValue(stringMessage, ChatPayload.class);
-        log.info("Received message: {} for VIN : {}", chatMessage.getMessage(), chatMessage.getVin());
-        // look for the session Id in GlobalStore for the given vin in the payload
-        if (!GlobalStore.CLIENT_WEBSOCKET_SESSIONS.containsKey(chatMessage.getVin())) {
-            log.error("No active session found for VIN: {}", chatMessage.getVin());
-            session.sendMessage(new org.springframework.web.socket.TextMessage("No active session found for VIN: " + chatMessage.getVin()));
+        log.info("Received request from senderVin: {} with Session ID: {}", senderVin, sessionId);
+
+
+        String stringMessage = (String) webSocketMessage.getPayload();
+        ChatPayload payload = objectMapper.readValue(stringMessage, ChatPayload.class);
+
+        if (payload.getVin() == null || payload.getVin().isEmpty()) {
+            log.error("VIN is not present in the payload or invalid length");
+            session.sendMessage(new org.springframework.web.socket.TextMessage("VIN is not present in the payload or invalid length"));
             return;
         }
-        //if found, send the message to the session
-        WebSocketSession clientSession = GlobalStore.CLIENT_WEBSOCKET_SESSIONS.get(chatMessage.getVin());
-        if (clientSession == null || !clientSession.isOpen()) {
-            log.error("Session for VIN: {} is not open or does not exist", chatMessage.getVin());
-            session.sendMessage(new org.springframework.web.socket.TextMessage("Session for VIN: " + chatMessage.getVin() + " is not open or does not exist"));
-            return;
+
+        // For Chat Request, we will send the webSocketMessage to the session with the given VIN
+        if (payload.getMessageType() == MessageTypeEnum.CHAT_REQUEST) {
+            handleChatRequest(senderVin, session, payload);
         }
-        clientSession.sendMessage(new org.springframework.web.socket.TextMessage(chatMessage.getMessage()));
-        session.sendMessage(new org.springframework.web.socket.TextMessage("Message sent to VIN: " + chatMessage.getVin()));
+
+        // For Chat Message, we will send the webSocketMessage to the session with the given VIN
+        if (payload.getMessageType() == MessageTypeEnum.CHAT_MESSAGE) {
+            handleChatMessage(senderVin, session, payload);
+        }
+
+        if (payload.getMessageType() == MessageTypeEnum.CHAT_REQUEST_ACCEPTED) {
+            // For Chat Response, we will send the webSocketMessage to the session with the given VIN
+            handleChatRequestResponse(senderVin, session, payload);
+        }
+
     }
 
     @Override
@@ -68,9 +98,89 @@ public class ChatRequestController implements WebSocketHandler {
         return false;
     }
 
+    private void handleChatMessage(String senderVin, WebSocketSession session, ChatPayload payload) throws IOException {
+        WebSocketSession clientSession = getActiveClientSession(payload.getVin(), session);
+        if (clientSession == null) {
+            return; // No active session found or session is not open
+        }
+        clientSession.sendMessage(new org.springframework.web.socket.TextMessage(payload.getMessage()));
+        // save the sent message to the chat service
+        chatService.SaveMessages(senderVin, payload.getVin(), payload.getMessage());
+        log.info("Message sent to senderVin: {} with message: {}", payload.getVin(), payload.getMessage());
+    }
+
+
+
+    private void handleChatRequest(String senderVin, WebSocketSession session, ChatPayload payload) throws IOException {
+        WebSocketSession clientSession = getActiveClientSession(payload.getVin(), session);
+        if (clientSession == null) {
+            return; // No active session found or session is not open
+        }
+        // send the chat request message to the client session
+        clientSession.sendMessage(new org.springframework.web.socket.TextMessage("Chat request from: " + senderVin));
+        // save the chat request to the chat service
+
+        chatService.SaveOrUpdateChatRequest(session.getId(), senderVin, payload.getVin(), "PENDING");
+        log.info("Chat request sent to : {}, from vin {}", payload.getVin(), senderVin);
+    }
+
+
+    private void handleChatRequestResponse(String senderVin, WebSocketSession session, ChatPayload payload) throws IOException {
+        WebSocketSession clientSession = getActiveClientSession(payload.getVin(), session);
+        if (clientSession == null) {
+            return; // No active session found or session is not open
+        }
+        // send the chat request response to the client session
+        try {
+            clientSession.sendMessage(new org.springframework.web.socket.TextMessage("Chat request response from: " + senderVin + " with status: " + payload.getStatus()));
+        } catch (IOException e) {
+            log.error("Error sending message to client session: {}", e.getMessage());
+        }
+        // save the chat request response to the chat service
+        chatService.SaveOrUpdateChatRequest(clientSession.getId(), senderVin, payload.getVin(), payload.getStatus());
+        // create a conversation if the status is ACCEPTED
+        if ("ACCEPTED".equalsIgnoreCase(payload.getStatus())) {
+            String conversationId = chatService.createConversation(senderVin, payload.getVin());
+            GlobalStore.CONVERSATION_ID_MAP.put((java.util.HashSet<String>) Set.of(senderVin, payload.getVin()), conversationId);
+            log.info("Conversation created with ID: {} for senderVin: {} and receiverVin: {}", conversationId, senderVin, payload.getVin());
+        }
+    }
+
+
     private Boolean isSessionIsAlreadyExistingForVin(String VIN, String sessionId) {
         WebSocketSession existingSessionForVin = GlobalStore.CLIENT_WEBSOCKET_SESSIONS.get(VIN);
         return existingSessionForVin != null && existingSessionForVin.getId().equals(sessionId) && existingSessionForVin.isOpen();
+    }
+
+    private WebSocketSession getActiveClientSession(String vin, WebSocketSession requesterSession) throws IOException {
+        if (!GlobalStore.CLIENT_WEBSOCKET_SESSIONS.containsKey(vin)) {
+            log.error("No active session found for senderVin: {}", vin);
+            requesterSession.sendMessage(new org.springframework.web.socket.TextMessage("No active session found for senderVin: " + vin));
+            return null;
+        }
+        WebSocketSession clientSession = GlobalStore.CLIENT_WEBSOCKET_SESSIONS.get(vin);
+        if (clientSession == null || !clientSession.isOpen()) {
+            log.error("Session for senderVin: {} is not open or does not exist", vin);
+            requesterSession.sendMessage(new org.springframework.web.socket.TextMessage("Session for senderVin: " + vin + " is not open or does not exist"));
+            return null;
+        }
+        return clientSession;
+    }
+
+
+    private String extractVinFromSession(WebSocketSession session) {
+        URI uri = session.getUri();
+        if (uri != null) {
+            String query = uri.getQuery(); // e.g., vin=VIN123
+            if (query != null) {
+                Map<String, String> queryParams = Arrays.stream(query.split("&"))
+                        .map(param -> param.split("=", 2))
+                        .filter(pair -> pair.length == 2)
+                        .collect(Collectors.toMap(pair -> pair[0], pair -> pair[1]));
+                return queryParams.get("vin");
+            }
+        }
+        return null;
     }
 
 }
