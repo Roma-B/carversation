@@ -14,7 +14,7 @@ import java.util.List;
 
 public interface UsersRepository extends JpaRepository<UserEntity, Long> {
 
-   UserEntity findByVin(String vin);
+    UserEntity findByVin(String vin);
 
     @Modifying
     @Transactional
@@ -26,13 +26,13 @@ public interface UsersRepository extends JpaRepository<UserEntity, Long> {
     void upsertCarLocation(@Param("vin") String vin, @Param("lat") double lat, @Param("lng") double lng);
 
     @Query(value = """
-        SELECT * FROM users 
-        WHERE vin != :vin 
-          AND ST_DistanceSphere(
-                ST_SetSRID(ST_MakePoint(lng, lat), 4326),
-                ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)
-              ) <= :radius
-        """, nativeQuery = true)
+            SELECT * FROM users 
+            WHERE vin != :vin 
+              AND ST_DistanceSphere(
+                    ST_SetSRID(ST_MakePoint(lng, lat), 4326),
+                    ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)
+                  ) <= :radius
+            """, nativeQuery = true)
     List<UserEntity> findNearbyUsers(
             @Param("vin") String vin,
             @Param("lat") double lat,

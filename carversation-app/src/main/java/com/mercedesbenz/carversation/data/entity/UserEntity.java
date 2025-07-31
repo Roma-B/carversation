@@ -1,8 +1,8 @@
 package com.mercedesbenz.carversation.data.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Column;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
