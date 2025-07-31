@@ -10,6 +10,7 @@ import com.mercedesbenz.carversation.service.UsersService;
 import com.mercedesbenz.carversation.util.GlobalStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.socket.*;
 
 import java.io.IOException;
@@ -45,13 +46,25 @@ public class ChatRequestController implements WebSocketHandler {
         }
         String sessionId = session.getId();
         GlobalStore.CLIENT_WEBSOCKET_SESSIONS.put(vin, session);
-        ConnectionResponsePayload connectionResponsePayload = new ConnectionResponsePayload();
-        UserEntity user = usersRepository.findByVin(vin);
-        NearByUsers nearByUsers = usersService.findUsersWithinRadius(user.getLat(), user.getLng(), vin, 7000);
-        connectionResponsePayload.setMessageType(MessageTypeEnum.NEARBY_USERS);
-        connectionResponsePayload.setNearByUsers(nearByUsers);
-        sendJson(session, connectionResponsePayload);
+        pushNearByUsers();
         log.info("Connection established with Session Id: {} and VIN: {}", sessionId, vin);
+    }
+
+
+    private void pushNearByUsers() {
+        // This method can be used to push nearby users to all connected clients periodically
+        for (Map.Entry<String, WebSocketSession> entry : GlobalStore.CLIENT_WEBSOCKET_SESSIONS.entrySet()) {
+            String vin = entry.getKey();
+            WebSocketSession session = entry.getValue();
+            if (session.isOpen()) {
+                UserEntity user = usersRepository.findByVin(vin);
+                NearByUsers nearByUsers = usersService.findUsersWithinRadius(user.getLat(), user.getLng(), vin, 7000);
+                ConnectionResponsePayload connectionResponsePayload = new ConnectionResponsePayload();
+                connectionResponsePayload.setMessageType(MessageTypeEnum.NEARBY_USERS);
+                connectionResponsePayload.setNearByUsers(nearByUsers);
+                sendJson(session, connectionResponsePayload);
+            }
+        }
     }
 
     @Override
