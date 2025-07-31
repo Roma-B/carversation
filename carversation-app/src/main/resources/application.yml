@@ -11,8 +11,8 @@ spring.application.version: '@project.version@'
 
 spring:
   datasource:
-    username: parking_admin
-    password: G8xkJsKcQe5gKnPYHIEa
+    username: <username>
+    password: <password>
     url: jdbc:postgresql://localhost:5002/carversation
     driver-class-name: org.postgresql.Driver
   jpa:
