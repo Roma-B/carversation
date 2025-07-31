@@ -1,10 +1,12 @@
 package com.mercedesbenz.carversation.util;
 
+import org.antlr.v4.runtime.misc.OrderedHashSet;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GlobalStore {
@@ -20,5 +22,5 @@ public class GlobalStore {
     This can be kept as a global store for conversation IDs along with their participants.
     The participant order is not important, so we use an Set to store them.
      */
-    public static final Map<HashSet<String>, String> CONVERSATION_ID_MAP = new ConcurrentHashMap<>();
+    public static final Map<Set<String>, String> CONVERSATION_ID_MAP = new ConcurrentHashMap<>();
 }

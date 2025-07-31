@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -27,18 +28,17 @@ public class ChatService {
     @Autowired
     private ChatRequestsRepository chatRequestsRepository;
 
+    public List<MessagesEntity> GetAllMessagesByConversationId(String conversationId) {
+        // Fetch all messages for the given conversation ID
+        return messageRepository.findByConversationId(conversationId);
+    }
+
     // Saves messages
-    public void SaveMessages(String sender, String receiver, String message) {
-        String conversationId = "";
-        // get a conversationId, if a conversation already exists, otherwise create a new one
-        HashSet<String> id = (HashSet<String>) Set.of(sender, receiver);
-        if (GlobalStore.CONVERSATION_ID_MAP.get(id) == null) {
-            conversationId = createConversation(sender, receiver);
-            GlobalStore.CONVERSATION_ID_MAP.put(id, conversationId);
-        }
+    public void SaveMessages(String conversationId, String sender, String receiver, String message) {
         // Create a new message entity
         MessagesEntity messageEntity = new MessagesEntity();
-        messageEntity.setId(conversationId);
+        messageEntity.setId(String.valueOf(UUID.randomUUID()));
+        messageEntity.setConversationId(conversationId);
         messageEntity.setSenderVin(sender);
         messageEntity.setReceiverVin(receiver);
         messageEntity.setContent(message);
@@ -67,14 +67,14 @@ public class ChatService {
         chatRequestsRepository.save(chatRequest);
     }
 
-    public String createConversation(String senderVin, String receiverVin)  {
+    public void createConversation(String conversationId, String senderVin, String receiverVin)  {
         ConversationsEntity conversation = new ConversationsEntity();
-        String conversationId = String.valueOf(UUID.randomUUID());
+      //  String conversationId = String.valueOf(UUID.randomUUID());
         conversation.setId(conversationId);
         conversation.setSenderVin(senderVin);
         conversation.setReceiverVin(receiverVin);
         conversation.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         conversationsRepository.save(conversation);
-        return conversationId;
+      //  return conversationId;
     }
 }

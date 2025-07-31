@@ -19,6 +19,8 @@ public class MessagesEntity {
     @Id
     @Column(name = "id")
     private String id;
+    @Column(name = "conversation_id", nullable = false)
+    private String conversationId;
     @Column(name = "sender_vin", nullable = false)
     private String senderVin;
     @Column(name = "receiver_vin", nullable = false)
