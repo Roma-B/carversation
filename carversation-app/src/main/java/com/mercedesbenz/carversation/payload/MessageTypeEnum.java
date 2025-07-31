@@ -3,6 +3,7 @@ package com.mercedesbenz.carversation.payload;
 public enum MessageTypeEnum {
     CHAT_REQUEST("CHAT_REQUEST"),
     CHAT_REQUEST_RESPONSE("CHAT_REQUEST_RESPONSE"),
+    NEARBY_USERS("NEARBY_USERS"),
     CHAT_MESSAGE("CHAT_MESSAGE");
 
     private final String value;

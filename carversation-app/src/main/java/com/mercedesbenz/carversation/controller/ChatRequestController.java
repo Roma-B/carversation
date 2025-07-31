@@ -1,10 +1,13 @@
 package com.mercedesbenz.carversation.controller;
 
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mercedesbenz.carversation.data.NearByUsers;
+import com.mercedesbenz.carversation.data.entity.UserEntity;
 import com.mercedesbenz.carversation.payload.ChatPayload;
 import com.mercedesbenz.carversation.payload.MessageTypeEnum;
+import com.mercedesbenz.carversation.repository.UsersRepository;
 import com.mercedesbenz.carversation.service.ChatService;
+import com.mercedesbenz.carversation.service.UsersService;
 import com.mercedesbenz.carversation.util.GlobalStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,18 +29,26 @@ public class ChatRequestController implements WebSocketHandler {
     @Autowired
     private ChatService chatService;
 
+    @Autowired
+    private UsersRepository usersRepository;
+
+    @Autowired
+    private UsersService usersService;
+
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         log.info("Connection initiated: {}", session.getId());
         String vin = extractVinFromSession(session);
         if(vin == null){
-            log.error("VIN is not present in the query parameters or invalid length");
-            session.sendMessage(new org.springframework.web.socket.TextMessage("VIN is not present in the query parameters or invalid length"));
+            session.sendMessage(new org.springframework.web.socket.TextMessage("MISSING_VIN_PARAMETER"));
             session.close(CloseStatus.POLICY_VIOLATION);
             return;
         }
         String sessionId = session.getId();
         GlobalStore.CLIENT_WEBSOCKET_SESSIONS.put(vin, session);
+        UserEntity user = usersRepository.findByVin(vin);
+        NearByUsers nearByUsers = usersService.findUsersWithinRadius(user.getLat(), user.getLng(), vin, 7000);
+        sendJson(session, nearByUsers);
         log.info("Connection established with Session Id: {} and VIN: {}", sessionId, vin);
     }
 
@@ -45,8 +56,7 @@ public class ChatRequestController implements WebSocketHandler {
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> webSocketMessage) throws Exception {
         String senderVin = extractVinFromSession(session);
         if(senderVin == null){
-            log.error("VIN is not present in the query parameters or invalid length");
-            session.sendMessage(new org.springframework.web.socket.TextMessage("VIN is not present in the query parameters or invalid length"));
+            session.sendMessage(new org.springframework.web.socket.TextMessage("MISSING_VIN_PARAMETER"));
             session.close(CloseStatus.POLICY_VIOLATION);
             return;
         }
@@ -61,8 +71,7 @@ public class ChatRequestController implements WebSocketHandler {
         ChatPayload payload = objectMapper.readValue(stringMessage, ChatPayload.class);
 
         if (payload.getVin() == null || payload.getVin().isEmpty()) {
-            log.error("VIN is not present in the payload or invalid length");
-            session.sendMessage(new org.springframework.web.socket.TextMessage("VIN is not present in the payload or invalid length"));
+            session.sendMessage(new org.springframework.web.socket.TextMessage("MISSING_VIN"));
             return;
         }
 
@@ -199,6 +208,16 @@ public class ChatRequestController implements WebSocketHandler {
             }
         }
         return null;
+    }
+
+    public void sendJson(WebSocketSession session, Object responseObject) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            String json = mapper.writeValueAsString(responseObject);
+            session.sendMessage(new TextMessage(json));
+        } catch (Exception e) {
+            e.printStackTrace(); // log or handle the error
+        }
     }
 
 }

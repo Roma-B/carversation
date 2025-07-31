@@ -14,6 +14,8 @@ import java.util.List;
 
 public interface UsersRepository extends JpaRepository<UserEntity, Long> {
 
+   UserEntity findByVin(String vin);
+
     @Modifying
     @Transactional
     @Query(value = """
