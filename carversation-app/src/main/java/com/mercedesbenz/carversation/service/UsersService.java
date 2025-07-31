@@ -20,7 +20,7 @@ public class UsersService {
     private AiNameGenerator aiNameGenerator;
 
     public NearByUsers findUsersWithinRadius(double lat, double lng, String vin, double radius) {
-        usersRepository.updateCarLocation(vin, lat, lng);
+        usersRepository.upsertCarLocation(vin, lat, lng);
         List<UserEntity> entities = usersRepository.findNearbyUsers(vin, lat, lng, radius);
 //        List<String> uniqueNames = aiNameGenerator.getUniqueRandomNames(entities.size());
         List<String> uniqueNames = aiNameGenerator.getUniqueNamesFromAI();

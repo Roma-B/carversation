@@ -16,8 +16,12 @@ public interface UsersRepository extends JpaRepository<UserEntity, Long> {
 
     @Modifying
     @Transactional
-    @Query("UPDATE users c SET c.lat = :lat, c.lng = :lng WHERE c.vin = :vin")
-    int updateCarLocation(@Param("vin") String vin, @Param("lat") double lat, @Param("lng") double lng);
+    @Query(value = """
+    INSERT INTO users (vin, lat, lng)
+    VALUES (:vin, :lat, :lng)
+    ON CONFLICT (vin) DO UPDATE SET lat = :lat, lng = :lng
+    """, nativeQuery = true)
+    void upsertCarLocation(@Param("vin") String vin, @Param("lat") double lat, @Param("lng") double lng);
 
     @Query(value = """
         SELECT * FROM users 
