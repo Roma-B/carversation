@@ -37,6 +37,12 @@ public class AiNameGenerator {
         return copy.subList(0, count);
     }
 
+    static String GetUniqueRandomName(){
+        AiNameGenerator aiNameGenerator = new AiNameGenerator();
+        List<String> names = aiNameGenerator.getUniqueRandomNames(1);
+        return names.isEmpty() ? "DefaultName" : names.get(0);
+    }
+
     public List<String> getUniqueNamesFromAI() {
         String url = "https://genai-nexus.api.corpinter.net/apikey/openai/deployments/gpt-4o/chat/completions?api-version=2024-06-01";
         String apiKey = "";
