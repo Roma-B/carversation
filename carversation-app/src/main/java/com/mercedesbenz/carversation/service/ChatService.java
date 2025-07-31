@@ -6,14 +6,11 @@ import com.mercedesbenz.carversation.data.entity.MessagesEntity;
 import com.mercedesbenz.carversation.repository.ChatRequestsRepository;
 import com.mercedesbenz.carversation.repository.ConversationsRepository;
 import com.mercedesbenz.carversation.repository.MessageRepository;
-import com.mercedesbenz.carversation.util.GlobalStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -56,7 +53,7 @@ public class ChatService {
             ChatRequestsEntity existingRequest = chatRequestsRepository.findById(chatId);
             existingRequest.setStatus(status);
             chatRequest = existingRequest;
-        }else{
+        } else {
             chatRequest.setId(String.valueOf(chatId));
             chatRequest.setSenderVin(senderVin);
             chatRequest.setReceiverVin(receiverVin);
@@ -67,14 +64,12 @@ public class ChatService {
         chatRequestsRepository.save(chatRequest);
     }
 
-    public void createConversation(String conversationId, String senderVin, String receiverVin)  {
+    public void createConversation(String conversationId, String senderVin, String receiverVin) {
         ConversationsEntity conversation = new ConversationsEntity();
-      //  String conversationId = String.valueOf(UUID.randomUUID());
         conversation.setId(conversationId);
         conversation.setSenderVin(senderVin);
         conversation.setReceiverVin(receiverVin);
         conversation.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         conversationsRepository.save(conversation);
-      //  return conversationId;
     }
 }

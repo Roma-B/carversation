@@ -1,10 +1,7 @@
 package com.mercedesbenz.carversation.util;
 
-import org.antlr.v4.runtime.misc.OrderedHashSet;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,10 +9,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GlobalStore {
 
     /*
-    * This can be stored in Redis or any other distributed cache.
-    * Key -> Client ID (VIN / Encrypted in VIN)
-    * Value -> WebSocketSession of a client
-    * */
+     * This can be stored in Redis or any other distributed cache.
+     * Key -> Client ID (VIN / Encrypted in VIN)
+     * Value -> WebSocketSession of a client
+     * */
     public static final ConcurrentHashMap<String, WebSocketSession> CLIENT_WEBSOCKET_SESSIONS = new ConcurrentHashMap<>();
 
     /*

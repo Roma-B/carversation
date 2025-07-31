@@ -9,5 +9,5 @@ import java.util.List;
 @Repository
 public interface MessageRepository extends JpaRepository<MessagesEntity, Long> {
 
-   List<MessagesEntity> findByConversationId(String conversationId);
+    List<MessagesEntity> findByConversationId(String conversationId);
 }

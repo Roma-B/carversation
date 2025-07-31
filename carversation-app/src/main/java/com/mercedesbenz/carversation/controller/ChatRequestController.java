@@ -38,7 +38,7 @@ public class ChatRequestController implements WebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         log.info("Connection initiated: {}", session.getId());
         String vin = extractVinFromSession(session);
-        if(vin == null){
+        if (vin == null) {
             session.sendMessage(new org.springframework.web.socket.TextMessage("MISSING_VIN_PARAMETER"));
             session.close(CloseStatus.POLICY_VIOLATION);
             return;
@@ -57,13 +57,13 @@ public class ChatRequestController implements WebSocketHandler {
     @Override
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> webSocketMessage) throws Exception {
         String senderVin = extractVinFromSession(session);
-        if(senderVin == null){
+        if (senderVin == null) {
             session.sendMessage(new org.springframework.web.socket.TextMessage("MISSING_VIN_PARAMETER"));
             session.close(CloseStatus.POLICY_VIOLATION);
             return;
         }
         String sessionId = session.getId();
-        if(!isSessionIsAlreadyExistingForVin(senderVin, sessionId)) {
+        if (!isSessionIsAlreadyExistingForVin(senderVin, sessionId)) {
             GlobalStore.CLIENT_WEBSOCKET_SESSIONS.put(senderVin, session);
         }
         log.info("Received request from senderVin: {} with Session ID: {}", senderVin, sessionId);
@@ -136,7 +136,6 @@ public class ChatRequestController implements WebSocketHandler {
     }
 
 
-
     private void handleChatRequest(String senderVin, WebSocketSession session, ChatPayload payload) throws IOException {
         WebSocketSession clientSession = getActiveClientSession(payload.getVin(), session);
         if (clientSession == null) {
@@ -165,11 +164,11 @@ public class ChatRequestController implements WebSocketHandler {
         }
         // Get the conversation ID from the global store
         String conversationId = GlobalStore.CONVERSATION_ID_MAP.get(Set.of(senderVin, payload.getVin()));
-         if (conversationId == null) {
-             log.error("No chat request found for senderVin: {} and receiverVin: {}", senderVin, payload.getVin());
-             session.sendMessage(new org.springframework.web.socket.TextMessage("No chat request found for senderVin: " + senderVin + " and receiverVin: " + payload.getVin()));
-             return;
-         }
+        if (conversationId == null) {
+            log.error("No chat request found for senderVin: {} and receiverVin: {}", senderVin, payload.getVin());
+            session.sendMessage(new org.springframework.web.socket.TextMessage("No chat request found for senderVin: " + senderVin + " and receiverVin: " + payload.getVin()));
+            return;
+        }
         // save the chat request response to the chat service
         chatService.SaveOrUpdateChatRequest(conversationId, senderVin, payload.getVin(), payload.getStatus());
         // create a conversation if the status is ACCEPTED
@@ -181,7 +180,7 @@ public class ChatRequestController implements WebSocketHandler {
             sendJson(clientSession, chatRequestPayload);
             chatService.createConversation(conversationId, senderVin, payload.getVin());
             log.info("Conversation created with ID: {} for senderVin: {} and receiverVin: {}", conversationId, senderVin, payload.getVin());
-        }else {
+        } else {
             ChatRequestPayload chatRequestPayload = new ChatRequestPayload();
             chatRequestPayload.setRequestFrom(senderVin);
             chatRequestPayload.setRequestTo(payload.getVin());

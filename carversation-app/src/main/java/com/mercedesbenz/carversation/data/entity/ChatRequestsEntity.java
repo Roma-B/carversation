@@ -7,7 +7,6 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CurrentTimestamp;
-import org.hibernate.annotations.UuidGenerator;
 
 import java.sql.Timestamp;
 

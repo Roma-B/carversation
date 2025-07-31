@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class ChatPayload  {
+public class ChatPayload {
 
     @JsonProperty("vin")
     private String vin;

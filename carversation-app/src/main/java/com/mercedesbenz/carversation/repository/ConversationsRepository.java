@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ConversationsRepository extends JpaRepository<ConversationsEntity, Long> {
-   public String findBySenderVinAndReceiverVin(String senderVin, String receiverVin);
+    public String findBySenderVinAndReceiverVin(String senderVin, String receiverVin);
 }
