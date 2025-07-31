@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.mercedesbenz.carversation.service.AiNameGenerator.GetUniqueRandomName;
+
 @Service
 public class UsersService {
 
@@ -20,15 +22,16 @@ public class UsersService {
     private AiNameGenerator aiNameGenerator;
 
     public NearByUsers findUsersWithinRadius(double lat, double lng, String vin, double radius) {
-        usersRepository.upsertCarLocation(vin, lat, lng);
+
+        usersRepository.upsertCarLocation(vin, lat, lng, GetUniqueRandomName());
         List<UserEntity> entities = usersRepository.findNearbyUsers(vin, lat, lng, radius);
 //        List<String> uniqueNames = aiNameGenerator.getUniqueRandomNames(entities.size());
-        List<String> uniqueNames = aiNameGenerator.getUniqueNamesFromAI();
-        List<User> nearByUsers = mapToUsers(entities, uniqueNames);
+//        List<String> uniqueNames = aiNameGenerator.getUniqueNamesFromAI();
+        List<User> nearByUsers = mapToUsers(entities);
         return new NearByUsers(vin, nearByUsers);
     }
 
-    public List<User> mapToUsers(List<UserEntity> entities, List<String> names) {
+    public List<User> mapToUsers(List<UserEntity> entities) {
         List<User> users = new ArrayList<>();
         for (int i = 0; i < entities.size(); i++) {
             UserEntity entity = entities.get(i);
@@ -36,7 +39,7 @@ public class UsersService {
             user.setVin(entity.getVin());
             user.setLat(entity.getLat());
             user.setLng(entity.getLng());
-            user.setName(names.get(i));
+            user.setName(entity.getName());
             users.add(user);
         }
         return users;

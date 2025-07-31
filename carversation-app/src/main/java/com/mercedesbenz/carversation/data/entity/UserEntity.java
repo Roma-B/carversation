@@ -22,4 +22,7 @@ public class UserEntity {
 
     @Column(name = "lng", nullable = false)
     private double lng;
+
+    @Column(name = "name", nullable = false)
+    private String name;
 }

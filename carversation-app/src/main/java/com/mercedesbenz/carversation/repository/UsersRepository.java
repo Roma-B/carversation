@@ -19,11 +19,11 @@ public interface UsersRepository extends JpaRepository<UserEntity, Long> {
     @Modifying
     @Transactional
     @Query(value = """
-    INSERT INTO users (vin, lat, lng)
-    VALUES (:vin, :lat, :lng)
+    INSERT INTO users (vin, lat, lng, name)
+    VALUES (:vin, :lat, :lng, :name)
     ON CONFLICT (vin) DO UPDATE SET lat = :lat, lng = :lng
     """, nativeQuery = true)
-    void upsertCarLocation(@Param("vin") String vin, @Param("lat") double lat, @Param("lng") double lng);
+    void upsertCarLocation(@Param("vin") String vin, @Param("lat") double lat, @Param("lng") double lng, @Param("name") String name);
 
     @Query(value = """
             SELECT * FROM users 
